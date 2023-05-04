@@ -1495,26 +1495,42 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
         except Exception:
             openapi = {}
 
-        cached_api_version = openapi.get("info", {}).get("version")
+        cached_api_version = ".".join(openapi.get("info", {}).get("version").split(".")[:2])
 
         if netbox_api_version != cached_api_version:
-            openapi = self._fetch_information(
-                self.api_endpoint + "/api/docs/?format=openapi"
-            )
+            if netbox_api_version <= "3.4":
+                openapi = self._fetch_information(
+                    self.api_endpoint + "/api/docs/?format=openapi"
+                )
+            else:
+                openapi = self._fetch_information(
+                    self.api_endpoint + "/api/schema/?format=json"
+                )
 
             with open(tmp_file, "w") as file:
                 json.dump(openapi, file)
 
-        self.api_version = version.parse(openapi["info"]["version"])
-        self.allowed_device_query_parameters = [
-            p["name"] for p in openapi["paths"]["/dcim/devices/"]["get"]["parameters"]
-        ]
-        self.allowed_vm_query_parameters = [
-            p["name"]
-            for p in openapi["paths"]["/virtualization/virtual-machines/"]["get"][
-                "parameters"
+        self.api_version = version.parse(openapi["info"]["version"].split(" ")[0])
+        if netbox_api_version <= "3.4":
+            self.allowed_device_query_parameters = [
+                p["name"] for p in openapi["paths"]["/dcim/devices/"]["get"]["parameters"]
             ]
-        ]
+            self.allowed_vm_query_parameters = [
+                p["name"]
+                for p in openapi["paths"]["/virtualization/virtual-machines/"]["get"][
+                    "parameters"
+                ]
+            ]
+        else:
+            self.allowed_device_query_parameters = [
+                p["name"] for p in openapi["paths"]["/api/dcim/devices/"]["get"]["parameters"]
+            ]
+            self.allowed_vm_query_parameters = [
+                p["name"]
+                for p in openapi["paths"]["/api/virtualization/virtual-machines/"]["get"][
+                    "parameters"
+                ]
+            ]
 
     def validate_query_parameter(self, parameter, allowed_query_parameters):
         if not (isinstance(parameter, dict) and len(parameter) == 1):
