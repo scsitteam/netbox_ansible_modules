@@ -1511,26 +1511,15 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                 json.dump(openapi, file)
 
         self.api_version = version.parse(openapi["info"]["version"].split(" ")[0])
-        if netbox_api_version <= "3.4":
-            self.allowed_device_query_parameters = [
-                p["name"] for p in openapi["paths"]["/dcim/devices/"]["get"]["parameters"]
+        self.allowed_device_query_parameters = [
+            p["name"] for p in openapi["paths"]["/dcim/devices/"]["get"]["parameters"]
+        ]
+        self.allowed_vm_query_parameters = [
+            p["name"]
+            for p in openapi["paths"]["/virtualization/virtual-machines/"]["get"][
+                "parameters"
             ]
-            self.allowed_vm_query_parameters = [
-                p["name"]
-                for p in openapi["paths"]["/virtualization/virtual-machines/"]["get"][
-                    "parameters"
-                ]
-            ]
-        else:
-            self.allowed_device_query_parameters = [
-                p["name"] for p in openapi["paths"]["/api/dcim/devices/"]["get"]["parameters"]
-            ]
-            self.allowed_vm_query_parameters = [
-                p["name"]
-                for p in openapi["paths"]["/api/virtualization/virtual-machines/"]["get"][
-                    "parameters"
-                ]
-            ]
+        ]
 
     def validate_query_parameter(self, parameter, allowed_query_parameters):
         if not (isinstance(parameter, dict) and len(parameter) == 1):
